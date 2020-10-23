@@ -1,0 +1,32 @@
+---
+title: "TCC PUC MDT 2020 -- Kim Gomes"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(xml2)
+```
+
+```{r}
+fnames <- fs::dir_ls("data",regexp="\\.xls$") %>% as.character()
+fnames
+```
+
+```{r}
+f1 <- xml2::read_xml(fnames[1])
+```
+
+
+```{r}
+xml_name(f1)
+#> [1] "foo"
+xml_children(f1)
+```
+
+
+```{r}
+xml2::xml_find_chr(f1, "Table")
+```
+
