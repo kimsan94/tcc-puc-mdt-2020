@@ -1,32 +1,123 @@
 ---
-title: "TCC PUC MDT 2020 -- Kim Gomes"
+title: "TCC PUC MDT 2020 -- Preparo -- Kim Gomes"
 output: html_document
 ---
 
+Carrega tidyverse
 
 ```{r}
 library(tidyverse)
-library(xml2)
 ```
 
+Lista os arquivos fonte
+
 ```{r}
-fnames <- fs::dir_ls("data",regexp="\\.xls$") %>% as.character()
+fnames <- fs::dir_ls("data_xls",regexp="\\.xls$") %>% as.character()
 fnames
 ```
+Lista as abas no primeiro arquivo:
 
 ```{r}
-f1 <- xml2::read_xml(fnames[1])
+sheet_names <- readxl::excel_sheets(fnames[1])
+sheet_names
+```
+
+# Aba 1: Key Metrics
+
+Le a aba "Key Metrics" do primeiro arquivo:
+
+```{r}
+df_key_metrics_1 <- readxl::read_xls(path=fnames[1],sheet="Key Metrics",skip=2,col_names = F)
+```
+
+Le nome das colunas:
+
+```{r}
+colnames_key_metrics <- readxl::read_xls(path=fnames[1],
+                                         sheet="Key Metrics",n_max = 0) %>% colnames
+```
+
+
+Combina as abas "Key Metrics" de todos os arquivos numa unica tabela:
+
+```{r}
+df_key_metrics <- fnames %>%
+  map_dfr(~(readxl::read_xls(path=.x,
+                             sheet="Key Metrics",
+                             skip=2,
+                             col_names = F))) %>%
+  set_names(colnames_key_metrics)
+```
+Salva key metrics combinado num csv
+
+
+
+# Aba 2: Lifetime Post Stories by act...
+
+Le a aba "Lifetime Post Stories by act..." do primeiro arquivo:
+
+```{r}
+sheet2 <- "Lifetime Post Stories by act..."
+```
+
+Le um arquivo para testar
+
+```{r}
+df_lifetime_posts_1 <- readxl::read_xls(path=fnames[1],sheet=sheet2)
+df_lifetime_posts_1
+```
+
+Combina as abas "lifetime posts" de todos os arquivos numa unica tabela. Nota filtrando linhas com a chave vazia (e.g., o 11o arquivo so contem uma linha).
+
+```{r}
+df_lifetime_posts <- fnames %>%
+  map_dfr(~(readxl::read_xls(path=.x,
+                             sheet=sheet2))) %>%
+  filter(!is.na(`Número de identificação da publicação`))
+```
+
+Quais colunas aparecem em ambas as tabelas
+
+```{r}
+common_columns <- intersect(colnames(df_key_metrics),
+                            colnames(df_lifetime_posts))
+common_columns
+```
+
+
+Quantas linhas na primeira tabela e quantas chaves distintas
+
+```{r}
+df_key_metrics%>%nrow
+n_distinct(df_key_metrics$`Número de identificação da publicação`)
+```
+
+Quantas linhas na segunda tabela e quantas chaves distintas
+
+```{r}
+df_lifetime_posts%>%nrow
+n_distinct(df_lifetime_posts$`Número de identificação da publicação`)
+```
+
+```{r}
+setdiff(df_lifetime_posts$`Número de identificação da publicação`,
+        df_key_metrics$`Número de identificação da publicação`)
+```
+
+Join entre as duas tabelas, deletando as colunas repetidas (exceto a chave):
+
+```{r}
+chave <- "Número de identificação da publicação"
+
+df_join <- df_key_metrics %>%
+  left_join(df_lifetime_posts %>%
+              select(-(setdiff(common_columns,chave))),
+            by=chave)
 ```
 
 
 ```{r}
-xml_name(f1)
-#> [1] "foo"
-xml_children(f1)
+df_join %>% write_csv2("data_csv/metrics_and_posts_joined.csv")
 ```
 
-
-```{r}
-xml2::xml_find_chr(f1, "Table")
-```
 

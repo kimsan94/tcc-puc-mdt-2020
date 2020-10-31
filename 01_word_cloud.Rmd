@@ -1,0 +1,25 @@
+---
+title: "TCC PUC MDT 2020 -- Word Cloud -- Kim Gomes"
+output: html_document
+---
+
+Carrega tidyverse
+
+```{r}
+library(tidyverse)
+library(wordcloud2)
+```
+
+Le uma tabela com join das abas "Key Metrics" e "Lifetime Posts by act..."
+
+```{r}
+df_join <- read_csv2("data_csv/metrics_and_posts_joined.csv")
+colnames(df_join)
+```
+
+Exercicio: fazer wordcloud da coluna "Publicar mensagem"
+
+```{r}
+df_join %>% head(5) %>% pull("Publicar mensagem")
+```
+
