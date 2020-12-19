@@ -17,9 +17,60 @@ df_join <- read_csv2("data_csv/metrics_and_posts_joined.csv")
 colnames(df_join)
 ```
 
+Seguidores no dia 26/06/2020
+```{r}
+seguidores <- 110550
+```
+
+```{r}
+df_join_engaj <- df_join %>% mutate(taxa_engajamento=(comment+share+like)/seguidores)
+```
 Exercicio: fazer wordcloud da coluna "Publicar mensagem"
 
 ```{r}
 df_join %>% head(5) %>% pull("Publicar mensagem")
 ```
+```{r}
+wordcloud2(demoFreq, size = 1,shape = 'star')
+```
 
+```{r}
+wordcloud2(demoFreq , size = 2, minRotation = -pi/6, maxRotation = -pi/6,
+  rotateRatio = 1)
+```
+
+
+```{r}
+install.packages("RColorBrewer")
+library(RColorBrewer)
+```
+```{r}
+install.packages("tm")
+library(tm)
+```
+
+```{r}
+# Create a corpus  
+docs0 <- Corpus(VectorSource(df_join$`Publicar mensagem`))
+```
+
+```{r}
+docs <- docs0 %>%
+  tm_map(removeNumbers) %>%
+  tm_map(removePunctuation) %>%
+  tm_map(stripWhitespace) %>%
+  tm_map(content_transformer(tolower)) %>%
+  tm_map(removeWords, stopwords("portuguese"))
+```
+
+```{r}
+dtm <- TermDocumentMatrix(docs) 
+matrix <- as.matrix(dtm) 
+words <- sort(rowSums(matrix),decreasing=TRUE) 
+df <- data.frame(word = names(words),freq=words)
+```
+
+```{r}
+wordcloud2(df , size = 2, minRotation = -pi/6, maxRotation = -pi/6,
+  rotateRatio = 1)
+```
