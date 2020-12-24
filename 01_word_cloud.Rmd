@@ -7,6 +7,7 @@ Carrega tidyverse
 
 ```{r}
 library(tidyverse)
+library(lubridate)
 library(wordcloud2)
 ```
 
@@ -19,31 +20,23 @@ colnames(df_join)
 
 Seguidores no dia 26/06/2020
 ```{r}
-seguidores <- 110550
+seguidores <- 56006
 ```
 
 ```{r}
-df_join_engaj <- df_join %>% mutate(taxa_engajamento=(comment+share+like)/seguidores)
+df_join_engaj <- df_join %>% 
+  filter(!is.na(comment+share+like)) %>% 
+  mutate(taxa_engajamento=(comment+share+like)/seguidores)
 ```
 Exercicio: fazer wordcloud da coluna "Publicar mensagem"
 
-```{r}
-df_join %>% head(5) %>% pull("Publicar mensagem")
-```
-```{r}
-wordcloud2(demoFreq, size = 1,shape = 'star')
-```
-
-```{r}
-wordcloud2(demoFreq , size = 2, minRotation = -pi/6, maxRotation = -pi/6,
-  rotateRatio = 1)
-```
 
 
 ```{r}
 install.packages("RColorBrewer")
 library(RColorBrewer)
 ```
+
 ```{r}
 install.packages("tm")
 library(tm)
@@ -70,7 +63,138 @@ words <- sort(rowSums(matrix),decreasing=TRUE)
 df <- data.frame(word = names(words),freq=words)
 ```
 
+
+###
 ```{r}
-wordcloud2(df , size = 2, minRotation = -pi/6, maxRotation = -pi/6,
-  rotateRatio = 1)
+set.seed(1)
+wordcloud2(df , size = 2, minRotation = -pi/6, maxRotation = -pi/6, rotateRatio = 1)
+```
+Plotando ranking de Posts por Alcance
+
+
+```{r}
+df_join_engaj %>%
+   group_by('Lifetime Post Total Reach') %>%
+   mutate(Publicado=as.Date(Publicado, format = "%Y.%m.%d"))
+```
+```{r}
+df_join_engaj$Publicado %>% class()
+```
+```{r}
+df_join_engaj$`Lifetime Post Total Reach` %>% class()
+```
+
+Histograma dos Alcances
+
+```{r}
+df_join_engaj %>% 
+  filter(year(Publicado)>2018)%>% 
+  ggplot(aes(taxa_engajamento)) + 
+  geom_histogram(fill='green', color='gray')+
+  theme(legend.position ="none") + 
+  labs(x = "Taxa de Engajamento",   y = "Frequência", title = "Histograma da taxa de engajamento dos Posts 2019-2020") 
+```
+```{r}
+mean(df_join_engaj$`Lifetime Post Total Reach`)
+```
+
+
+
+
+
+
+Série temporal do Alcance dos Posts no período 2019-2020
+
+```{r}
+df_join_engaj %>% 
+  filter(year(Publicado)>2018)%>% 
+  ggplot(aes(Publicado,`Lifetime Post Total Reach`, fill = 'Lifetime Post Total Reach')) + 
+  geom_line(color='green')+
+  geom_smooth()+
+  theme(legend.position ="none") + 
+  labs(y = "Alcance",   x = "Data de Postagem", title = "Alcance dos Posts 2019-2020") 
+```
+
+Ranking dos top 8 Posts por Alcance
+```{r}
+df_join_engaj %>% 
+  filter(year(Publicado)>2018)%>%
+  arrange(desc(`Lifetime Post Total Reach`)) %>% 
+  head(8) %>%
+  mutate(`Número de identificação da publicação` = fct_reorder(`Número de identificação da publicação`, `Lifetime Post Total Reach`)) %>%
+  ggplot(aes(`Número de identificação da publicação`,`Lifetime Post Total Reach`, fill = `Número de identificação da publicação`)) + 
+  geom_col()+
+  theme(legend.position ="none") + 
+  labs(title = "Top 8 Posts por Alcance (2019-2020)") +
+  coord_flip()
+```
+
+
+```{r}
+df_join_engaj %>% 
+  filter(year(Publicado)>2018)%>%
+  arrange(desc(`Lifetime Post Total Reach`)) %>% 
+  head(8) %>%
+  mutate(`Publicar mensagem`=str_sub(`Publicar mensagem`,end=20)) %>% 
+  mutate(`Publicar mensagem` = fct_reorder(`Publicar mensagem`, `Lifetime Post Total Reach`)) %>%
+  ggplot(aes(`Publicar mensagem`,`Lifetime Post Total Reach`, fill = `Número de identificação da publicação`)) + 
+  geom_col()+
+  theme(legend.position ="none") + 
+  labs(title = "Top 8 Posts por Alcance (2019-2020)", x="", y='Alcance') +
+  coord_flip()
+```
+
+Abrindo planilha df_join_engaj (planilha unificada das métricas com taxa de engjamento)
+
+```{r}
+data(df_join_engaj)
+View(df_join_engaj)
+```
+
+Elencando 10 posts com maior engajamento
+
+```{r}
+arrange(df_join_engaj, desc(taxa_engajamento)) 
+```
+
+Abrindo planilha df (palavras de maior frequência nos posts)
+
+```{r}
+data(df)
+View(df)
+```
+
+###Elencando as 10 primeiras palavras em ordem de frequência
+
+```{r}
+arrange(df, desc(freq)) 
+```
+
+
+Criando histograma de distribuição de engajamentos
+
+
+
+Encontrando taxa de engajamento mínima
+
+```{r}
+min(df_join_engaj$taxa_engajamento)
+```
+
+Encontrando taxa de engajamento máxima
+
+```{r}
+max(df_join_engaj$taxa_engajamento)
+```
+
+Encontrando taxa de engajamento médio
+
+```{r}
+mean(df_join_engaj$taxa_engajamento)
+```
+
+Encontrando mediana taxa de engajamento 
+
+```{r}
+median(df_join_engaj$taxa_engajamento)
 ```
