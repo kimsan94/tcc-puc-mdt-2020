@@ -9,7 +9,13 @@ Carrega tidyverse
 library(tidyverse)
 library(lubridate)
 library(wordcloud2)
+#install.packages("RColorBrewer")
+library(RColorBrewer)
+#install.packages("tm")
+library(tm)
 ```
+
+# Inicializacao
 
 Le uma tabela com join das abas "Key Metrics" e "Lifetime Posts by act..."
 
@@ -19,6 +25,7 @@ colnames(df_join)
 ```
 
 Seguidores no dia 26/06/2020
+
 ```{r}
 seguidores <- 56006
 ```
@@ -30,17 +37,7 @@ df_join_engaj <- df_join %>%
 ```
 Exercicio: fazer wordcloud da coluna "Publicar mensagem"
 
-
-
-```{r}
-install.packages("RColorBrewer")
-library(RColorBrewer)
-```
-
-```{r}
-install.packages("tm")
-library(tm)
-```
+# Wordcloud
 
 ```{r}
 # Create a corpus  
@@ -64,12 +61,14 @@ df <- data.frame(word = names(words),freq=words)
 ```
 
 
-###
 ```{r}
 set.seed(1)
 wordcloud2(df , size = 2, minRotation = -pi/6, maxRotation = -pi/6, rotateRatio = 1)
 ```
-Plotando ranking de Posts por Alcance
+
+# Alcance
+
+## Posts por Alcance
 
 
 ```{r}
@@ -77,33 +76,17 @@ df_join_engaj %>%
    group_by('Lifetime Post Total Reach') %>%
    mutate(Publicado=as.Date(Publicado, format = "%Y.%m.%d"))
 ```
+
+
 ```{r}
 df_join_engaj$Publicado %>% class()
 ```
+
 ```{r}
 df_join_engaj$`Lifetime Post Total Reach` %>% class()
 ```
 
-Histograma dos Alcances
-
-```{r}
-df_join_engaj %>% 
-  filter(year(Publicado)>2018)%>% 
-  ggplot(aes(taxa_engajamento)) + 
-  geom_histogram(fill='green', color='gray')+
-  theme(legend.position ="none") + 
-  labs(x = "Taxa de Engajamento",   y = "Frequência", title = "Histograma da taxa de engajamento dos Posts 2019-2020") 
-```
-```{r}
-mean(df_join_engaj$`Lifetime Post Total Reach`)
-```
-
-
-
-
-
-
-Série temporal do Alcance dos Posts no período 2019-2020
+## Série temporal do Alcance dos Posts no período 2019-2020
 
 ```{r}
 df_join_engaj %>% 
@@ -115,7 +98,8 @@ df_join_engaj %>%
   labs(y = "Alcance",   x = "Data de Postagem", title = "Alcance dos Posts 2019-2020") 
 ```
 
-Ranking dos top 8 Posts por Alcance
+## Ranking dos top 8 Posts por Alcance
+
 ```{r}
 df_join_engaj %>% 
   filter(year(Publicado)>2018)%>%
@@ -129,6 +113,7 @@ df_join_engaj %>%
   coord_flip()
 ```
 
+## Top 8 por alcance
 
 ```{r}
 df_join_engaj %>% 
@@ -143,6 +128,73 @@ df_join_engaj %>%
   labs(title = "Top 8 Posts por Alcance (2019-2020)", x="", y='Alcance') +
   coord_flip()
 ```
+
+# Engajamento
+
+## Histograma do Engajamento
+
+```{r}
+df_join_engaj %>% 
+  filter(year(Publicado)>2018)%>% 
+  ggplot(aes(taxa_engajamento)) + 
+  geom_histogram(fill='green', color='gray')+
+  theme(legend.position ="none") + 
+  labs(x = "Taxa de Engajamento",   y = "Frequência", title = "Histograma da taxa de engajamento dos Posts 2019-2020") 
+```
+
+## Palavras chave com maior engajamento
+
+```{r}
+stop_words <- c("das","dos","para","por","nós","está","uma","nas","que","com","pra")
+```
+
+
+```{r}
+df_words <- df_join_engaj %>%
+  select(id=`Número de identificação da publicação`,
+         data=Publicado,msg=`Publicar mensagem`,
+         engaj=taxa_engajamento) %>%
+  # quebra cada mensagem numa lista palavra por palavra
+  mutate(msg=str_split(msg,"( +|-)")) %>%
+  # espichar verticalmente com uma palavra por linha
+  unnest(msg) %>%
+  rename(word=msg) %>%
+  # transforma tudo em letra minuscula
+  mutate(word=str_to_lower(word)) %>%
+  # remove todos os caracteres q nao forem letras alfabeticas
+  mutate(word=str_replace_all(word,"[^[:alpha:]#]","")) %>%
+  # elimina palavras com menos de 3 letras
+  filter(str_length(word)>=3,!str_starts(word,"http")) %>%
+  filter(!(word %in% stop_words))
+```
+
+Quem sao as palavras com mais frequencia
+
+```{r}
+df_words %>%
+  count(word,sort=T)
+```
+
+Engajamento TF*IDF = doc frequency x inverse logarithmic term freq 
+
+```{r}
+df_word_tfidf <- df_words %>%
+  group_by(word) %>%
+  summarize(freq=n(),posts=n_distinct(id),engaj_medio = mean(engaj)) %>%
+  # tf*idf: atribuindo pesos ao engaj medio proporcionais ao numero de posts distintos
+  # e inversamente proporcional ao logaritmo da frequencia daquela palavra no geral.
+  mutate(engaj_medio_tfidf=engaj_medio*posts/log(1+freq)) %>%
+  arrange(desc(engaj_medio_tfidf))
+df_word_tfidf %>% head(8)
+```
+
+### Kim, fazer um plot dos top 8 engaj_medio_tfidf na tabela acima usando geom_col como vc fez anteriormente
+
+
+```{r}
+mean(df_join_engaj$`Lifetime Post Total Reach`)
+```
+
 
 Abrindo planilha df_join_engaj (planilha unificada das métricas com taxa de engjamento)
 
@@ -164,7 +216,7 @@ data(df)
 View(df)
 ```
 
-###Elencando as 10 primeiras palavras em ordem de frequência
+Elencando as 10 primeiras palavras em ordem de frequência
 
 ```{r}
 arrange(df, desc(freq)) 
